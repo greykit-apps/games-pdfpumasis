@@ -20,7 +20,9 @@
 
   R.draw = (S, ui, now, dt) => {
     const g = R.g, Wd = R.cv.width, Ht = R.cv.height;
+    FX.emit(S, dt, S.me);
     FX.step(dt);
+    if (S.me.tgt !== null) R.lastTgt = S.me.tgt;
     g.save();
     if (R.shake > 0.3 && PD.prefs.shake) g.translate(Math.round((Math.random() - 0.5) * R.shake), Math.round((Math.random() - 0.5) * R.shake));
     R.shake *= Math.pow(0.03, dt);
@@ -98,15 +100,24 @@
     for (const e of evs) {
       switch (e.t) {
         case "splash": FX.splash(e.x, e.y); if (t && !t.mk) R.splashes.push(Object.assign(rel(m, t, e.x, e.y), { id: t.id, hit: false, at: now })); break;
-        case "shellHit": FX.shellHit(e.x, e.y); { const u = W.unit(S, e.id); if (u) R.splashes.push(Object.assign(rel(m, u, e.x, e.y), { id: u.id, hit: true, at: now })); } break;
-        case "mslHit": { const u = W.unit(S, e.id); if (u) FX.boom(u.x, u.y, 1); } break;
-        case "sunk": { const u = W.unit(S, e.id); if (u) { FX.boom(u.x, u.y, 1.4); for (let i = 0; i < 3; i++) FX.burn(u.x, u.y); } } break;
+        case "shellHit": FX.shellHit(e.x, e.y); break;
+        /* a hit that sinks her is the sinking's to show */
+        case "mslHit": { const u = W.unit(S, e.id); if (u && u.alive) FX.mslHit(u); } break;
+        case "sunk": { const u = W.unit(S, e.id); if (u) { FX.sunk(u, S.t); if (e.id === R.lastTgt) R.watch = e.id; } } break;
         case "hitUs": R.shake = Math.max(R.shake, 10); break;
         case "shellHitUs": R.shake = Math.max(R.shake, 5); break;
         case "gun": R.shake = Math.max(R.shake, 1.2); break;
       }
     }
     R.splashes = R.splashes.filter(s => now - s.at < 2000);
+  };
+  /* the target just sunk, still in the glasses until another is chosen or she is under */
+  R.watched = S => {
+    if (S.me.tgt !== null && S.me.tgt !== R.watch) R.watch = null;
+    if (R.watch === null || R.watch === undefined) return null;
+    const u = W.unit(S, R.watch);
+    if (!u || u.gone || u.alive) { R.watch = null; return null; }
+    return u;
   };
   /* a point as an offset from the target, across and along our line of sight */
   function rel(m, t, x, y) { const los = PD.angTo(m.x, m.y, t.x, t.y), ax = PD.hx(los), ay = PD.hy(los), ex = x - t.x, ey = y - t.y; return { r: ex * ax + ey * ay, a: ex * -ay + ey * ax }; }

@@ -81,6 +81,7 @@
   }
   /* Mission 0: the demo, the bot at the helm; never saved */
   function newDemo() {
+    PD.FX.clear();
     const D = game.demo = E.newMission(Math.random() < 0.5 ? 2 : 3, { seed: 1 + Math.floor(Math.random() * 1e6) });
     D.t = D.t0 = 18.4 * 3600; D.limit = 3600 * 3;
     game.demoMem = PD.Bot.make(); game.demoMem.tcWish = 2;
@@ -140,7 +141,7 @@
     $("title").hidden = true; $("title").innerHTML = "";
     document.body.classList.remove("on-title");
     $("game").hidden = false;
-    I.clear(); HUD.clear(); PD.FX.clear(); R.splashes = [];
+    I.clear(); HUD.clear(); PD.FX.clear(); R.splashes = []; R.watch = R.lastTgt = null;
     const u = game.ui;
     u.view = "bridge"; u.glasses = false; u.cursor = { x: S.me.x, y: S.me.y }; u.mapZoom = 0; u.mapAt = null;
     game.syncAids(); fit();
@@ -311,10 +312,11 @@
     const D = game.demo;
     titleAcc += dt;
     let n = 0;
-    while (titleAcc >= 20 && n++ < 3) { titleAcc -= 20; E.tick(D, PD.Bot.cmd(D, game.demoMem)); }
+    while (titleAcc >= 20 && n++ < 3) { titleAcc -= 20; R.events(D, E.tick(D, PD.Bot.cmd(D, game.demoMem)), now); }
     if (n >= 3) titleAcc = 0;
     PD.ShipArt.budget = 3;
     if (D.phase !== "sea" || E.elapsed(D) > 2.5 * 3600) newDemo();
+    PD.FX.emit(D, dt / 1000, D.me);
     PD.FX.step(dt / 1000);
     R.title(cv, D, now);
   }
