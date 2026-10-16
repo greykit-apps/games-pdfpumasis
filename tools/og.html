@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>og.png</title>
+<!-- The share card (og.png, 1200x630), laid out as the family's are (a cyan
+     rule, the wordmark with "PDF" in cyan, the description, a tagline, the
+     icon top right) beside a view drawn by the game's own renderer: the
+     Pumasis up on her foils at dusk, a Wolf boat burning ahead of her.
+     Serve the repo over http, open tools/og.html, and save the canvas
+     (window.ogPNG() is its data URL), or screenshot it headless at 1200x630:
+       msedge --headless --hide-scrollbars --window-size=1200,630
+              --screenshot=og.png http://127.0.0.1:8770/tools/og.html
+     Not deployed. -->
+<style>body{margin:0;background:#222;overflow:hidden}canvas{display:block}</style>
+</head>
+<body>
+<canvas id="og" width="1200" height="630"></canvas>
+<script>
+const SRC = ["../js/util.js", "../js/engine/const.js", "../js/engine/coast.js", "../js/engine/boats.js", "../js/engine/weapons.js", "../js/engine/ai.js", "../js/engine/missions.js", "../js/engine/world.js",
+  "../js/art/kit.js", "../js/art/model.js", "../js/art/ships.js", "../js/art/fx.js", "../js/art/view.js"];
+(function next(i) { if (i === SRC.length) return main(); const e = document.createElement("script"); e.src = SRC[i] + "?t=" + Date.now(); e.onload = () => next(i + 1); document.head.appendChild(e); })(0);
+</script>
+<script>
+function main() {
+"use strict";
+(() => {
+  const K = PD.K, E = PD.Engine, V = PD.View, FX = PD.FX;
+  PD.Render = { splashes: [] };
+  const S = E.newMission(2, { seed: 11 });
+  S.t = S.t0 = 18.45 * 3600;
+  const m = S.me;
+  Object.assign(m, { foil: "foil", spd: 44, hdg: 0.4, x: 80, y: 95 });
+  /* a Wolf boat ahead, hit and burning */
+  const foe = S.u.find(u => u.side === "wolf");
+  Object.assign(foe, { x: m.x + PD.hx(m.hdg + 0.24) * 2.2, y: m.y + PD.hy(m.hdg + 0.24) * 2.2, hdg: 2.4, spd: 20 });
+  S.u = [foe];
+  FX.boom(foe.x, foe.y, 1); for (const p of FX.items) p.t = p.life * 0.3;
+  for (let i = 0; i < 8; i++) FX.add({ k: "smoke", x: foe.x + (Math.random() - 0.5) * 0.01, y: foe.y, z: 8 + i * 6, r: 6 + i * 2, grow: 0, vz: 0, life: 99, dark: 0.9 });
+  PD.ShipArt.budget = 99;
+  const W = 400, H = 210, sc = K.mk(W, H), g0 = sc.getContext("2d");
+  const back = 0.07, side = -0.42, ex = m.x - PD.hx(m.hdg) * back + PD.hx(m.hdg + Math.PI / 2) * back * side, ey = m.y - PD.hy(m.hdg) * back + PD.hy(m.hdg + Math.PI / 2) * back * side;
+  V.draw(g0, { x: ex, y: ey, eyeH: 11, brg: m.hdg + 0.12, fov: 50 * PD.DEG, W, top: 0, bot: H, hz: 104, t: S.t, S, own: null, ownShip: m, now: 4000, aids: {} });
+  const cv = document.getElementById("og"), g = cv.getContext("2d");
+  g.imageSmoothingEnabled = false;
+  g.drawImage(sc, 0, 0, 1200, 630);
+  const sh = g.createLinearGradient(0, 0, 640, 0);
+  sh.addColorStop(0, "rgba(5,7,15,.96)"); sh.addColorStop(0.7, "rgba(5,7,15,.86)"); sh.addColorStop(1, "rgba(5,7,15,0)");
+  g.fillStyle = sh; g.fillRect(0, 0, 640, 630);
+  g.fillStyle = "#54f2ff"; g.fillRect(0, 0, 1200, 8);
+  const mono = 'Menlo, Consolas, "DejaVu Sans Mono", "Courier New", monospace';
+  g.textBaseline = "alphabetic";
+  g.font = `bold 84px ${mono}`;
+  g.fillStyle = "#54f2ff"; g.fillText("PDF", 72, 150);
+  g.fillStyle = "#e9e9f2"; g.fillText("Pumasis", 72, 238);
+  g.font = `28px ${mono}`; g.fillStyle = "#b4bac6";
+  const words = "Command a Pumacity Defense Force hydrofoil against the Wolf Empire's navy: 76mm gun, Harpoons, chaff, and eight missions.".split(" "), lines = [""];
+  for (const w of words) { const t = lines[lines.length - 1] ? lines[lines.length - 1] + " " + w : w; if (g.measureText(t).width > 500) lines.push(w); else lines[lines.length - 1] = t; }
+  lines.forEach((l, i) => g.fillText(l, 72, 310 + i * 40));
+  g.font = `24px ${mono}`; g.fillStyle = "#54f2ff";
+  g.fillText("A remake of PHM Pegasus, the 1987 classic", 72, 566);
+  const img = new Image();
+  img.onload = () => { g.drawImage(img, 1040, 40, 120, 120); window.ogReady = true; document.title = "ready"; };
+  img.src = "../icon.svg?" + Date.now();
+  window.ogPNG = () => cv.toDataURL("image/png");
+})();
+}
+</script>
+</body>
+</html>
