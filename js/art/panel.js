@@ -31,13 +31,14 @@
     const m = S.me, k = C.BOATS[m.key];
     ground(g, r.x, r.y, r.w, r.h);
     const h = r.h - 12, y = r.y + 7;
-    /* the widths: the radar in the middle, the rest round it */
-    const rad = Math.max(30, Math.min(64, Math.floor(h / 2) - 4));
-    const wW = Math.min(150, Math.max(120, Math.round(r.w * 0.2))), dW = Math.min(196, Math.max(150, Math.round(r.w * 0.26)));
+    /* the widths: the radar in the middle, the rest round it. The radar, its rim and the labels under it
+     * stay inside the panel (2r + 11 high), and leave the compass and the gauges 58 across each side */
+    const wW = Math.min(150, Math.max(120, Math.round(r.w * 0.2))), dW = Math.min(196, Math.max(140, Math.round(r.w * 0.26)));
     const midL = r.x + wW + 10, midR = r.x + r.w - dW - 10, mid = (midL + midR) / 2;
+    const rad = Math.max(30, Math.min(64, Math.floor((h - 14) / 2), Math.floor((midR - midL - 116) / 2)));
     weapons(g, S, ui, r.x + 6, y, wW, h, now);
     damage(g, S, r.x + r.w - dW - 6, y, dW, h, now);
-    const rcx = Math.round(mid), rcy = Math.round(y + h / 2 + 4);
+    const rcx = Math.round(mid), rcy = Math.round(y + 5 + rad + (h - 14 - rad * 2) / 2);
     radar(g, S, ui, rcx, rcy, rad, now);
     const side = (midR - midL - rad * 2) / 2;
     compass(g, S, Math.round(midL + side / 2 - 2), rcy, Math.max(18, Math.min(34, Math.floor(side / 2) - 6)), now);
@@ -53,7 +54,7 @@
   function weapons(g, S, ui, x, y, w, h, now) {
     const m = S.me, k = C.BOATS[m.key];
     plate(g, x, y, w, h, "WEAPONS");
-    const rows = [["gun", "6", "76MM GUN", m.ammo.shells, "gun"], ["chaff", "7", "CHAFF", m.ammo.chaff, "chaff"], ["msl", k.msl === "gabriel" ? "9" : "8", C.MSL[k.msl].name.toUpperCase(), m.ammo.msl, "msl"]];
+    const rows = [["gun", "6", "76MM GUN", m.ammo.shells, "gun"], ["chaff", "7", "CHAFF", m.ammo.chaff, "chaff"], ["msl", "8", C.MSL[k.msl].name.toUpperCase(), m.ammo.msl, "msl"]];
     let yy = y + 12;
     for (const [id, key, name, n, sec] of rows) {
       const sel = m.weapon === id, lv = B.lvl(m, sec);
@@ -178,8 +179,10 @@
   function damage(g, S, x, y, w, h, now) {
     const m = S.me, k = C.BOATS[m.key];
     plate(g, x, y, w, h, "DAMAGE");
-    /* side-on: the boat, and her systems' lamps */
-    const sw = w - 12, sp = A.sprite(A.modelOf(m.key, false), 8, A.sizeFor(Math.min(140, sw * 0.8)), "day");
+    /* side-on: the boat, and her systems' lamps; she is drawn smaller until the lamps and the hull fit under her */
+    const sw = w - 12, model = A.modelOf(m.key, false), fitH = h - 63;
+    let sp = null;
+    for (let i = A.SIZES.indexOf(A.sizeFor(Math.min(140, sw * 0.8))); i >= 0 && !(sp && sp.height <= fitH); i--) sp = A.sprite(model, 8, A.SIZES[i], "day");
     const sx = x + Math.round((w - sp.width) / 2), sy = y + 10;
     g.globalAlpha = 0.75; g.drawImage(sp, sx, sy); g.globalAlpha = 1;
     const sys = [["gun", "CANNON"], ["radar", "RADAR"], ["chaff", "CHAFF"], ["msl", "MISSILES"], ["fuel", "FUEL"], ["eng", "ENGINES"]];
@@ -188,7 +191,7 @@
     sys.forEach(([s, n], i) => { const lx = x + 5 + (i % 2) * colW, ly = yy + Math.floor(i / 2) * 9; lvlMark(g, lx, ly, m.dmg[s]); K.text3(g, n, lx + 12, ly, m.dmg[s] ? LVL[m.dmg[s]][1] : DIM); });
     yy += 30;
     /* from above: the six compartments, bow to the right */
-    const hw = w - 16, hh = Math.max(12, Math.min(20, y + h - yy - 12)), hx = x + 8, hy = yy;
+    const hw = w - 16, hh = Math.min(20, y + h - yy - 11), hx = x + 8, hy = yy;
     if (hh > 8) {
       const holed = B.holed(m), crit = k.crit;
       for (let i = 0; i < 6; i++) {

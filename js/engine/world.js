@@ -266,7 +266,9 @@
     const best = w.obj + nEnemy * w.sunk * (S.mission === 4 || S.mission === 7 || S.mission === 8 ? 0.4 : 1) + 12 * w.surv + (mi.limit / 60) * 0.35 * w.min;
     let rank = Math.floor(PD.clamp(total / best, 0, 1) * mi.max / 0.8);
     rank = Math.min(rank, ok ? mi.max : mi.max - 1);
-    return { rows, total, rank: C.RANKS[Math.max(0, rank)], rankI: Math.max(0, rank), max: C.RANKS[mi.max], code: S.cheated };
+    /* the total the next rank up needs, if the score alone can earn it */
+    const next = Math.max(0, rank) < (ok ? mi.max : mi.max - 1) ? Math.ceil((Math.max(0, rank) + 1) * 0.8 / mi.max * best) : null;
+    return { rows, total, rank: C.RANKS[Math.max(0, rank)], rankI: Math.max(0, rank), max: C.RANKS[mi.max], next, code: S.cheated };
   };
 
   /* the Konami code: magazines full, every section mended, and no damage from here; the score is marked */

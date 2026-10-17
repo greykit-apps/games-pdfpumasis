@@ -61,8 +61,11 @@
     g.fillStyle = "rgba(5,7,10,.55)";
     if (ay > r.y) g.fillRect(r.x, r.y, r.w, ay - r.y); if (by < r.y + r.h) g.fillRect(r.x, by, r.w, r.y + r.h - by);
     if (ax > r.x) g.fillRect(r.x, Math.max(r.y, ay), ax - r.x, Math.min(by, r.y + r.h) - Math.max(r.y, ay)); if (bx < r.x + r.w) g.fillRect(bx, Math.max(r.y, ay), r.x + r.w - bx, Math.min(by, r.y + r.h) - Math.max(r.y, ay));
+    /* and its edge, dotted, so the shade reads as the boundary it is */
+    for (let x = Math.max(r.x, ax); x < Math.min(r.x + r.w, bx); x += 3) { if (ay > r.y) K.px(g, x, ay, "#4a5d78"); if (by < r.y + r.h) K.px(g, x, by, "#4a5d78"); }
+    for (let y = Math.max(r.y, ay); y < Math.min(r.y + r.h, by); y += 3) { if (ax > r.x) K.px(g, ax, y, "#4a5d78"); if (bx < r.x + r.w) K.px(g, bx, y, "#4a5d78"); }
     /* names */
-    for (const n of Co.WATERS) { const [px, py] = F.toS(n.x, n.y); if (px > r.x && px < r.x + r.w && py > r.y && py < r.y + r.h) K.text3(g, n.name, Math.round(px - K.text3w(n.name) / 2), Math.round(py), "#2e4a66"); }
+    for (const n of Co.WATERS) { const [px, py] = F.toS(n.x, n.y); if (px > r.x && px < r.x + r.w && py > r.y && py < r.y + r.h) K.text3(g, n.name, Math.round(px - K.text3w(n.name) / 2), Math.round(py), "#7a9cc4", INK); }
     for (const p of Co.PLACES) { const [px, py] = F.toS(p.x, p.y); if (px < r.x || px > r.x + r.w || py < r.y || py > r.y + r.h) continue; K.rect(g, px - 1, py - 1, 3, 3, p.side === "wolf" ? "#ff8a62" : p.side === "neutral" ? "#e9d8a8" : "#9fd6ff"); K.text3(g, p.name, Math.round(px + 4), Math.round(py - 2), TXT, INK); }
     /* the objective, a Field aid */
     if (aids.goal) goal(g, S, F, r, now);
@@ -115,8 +118,9 @@
     if (ui.cursor) {
       const [cx, cy] = F.toS(ui.cursor.x, ui.cursor.y), col = Math.floor(now / 300) % 2 ? "#ffd36a" : "#f4f2ea";
       K.rect(g, cx - 7, cy, 5, 1, col); K.rect(g, cx + 3, cy, 5, 1, col); K.rect(g, cx, cy - 7, 1, 5, col); K.rect(g, cx, cy + 3, 1, 5, col);
+      /* the range and bearing from us, once the cursor has left the boat */
       const d = PD.dist(m.x, m.y, ui.cursor.x, ui.cursor.y), s = PD.nm(d) + " NM " + PD.deg3(PD.angTo(m.x, m.y, ui.cursor.x, ui.cursor.y));
-      K.text3(g, s, Math.round(cx + 8), Math.round(cy + 6), "#ffd36a", INK);
+      if (d * F.k >= 4) K.text3(g, s, Math.round(cx + 8), Math.round(cy + 6), "#ffd36a", INK);
     }
     /* a scale bar */
     const sb = [5, 10, 20, 40].find(v => v * F.k > 40) || 40, sx = r.x + 8, sy = r.y + r.h - 8;

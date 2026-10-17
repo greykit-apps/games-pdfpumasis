@@ -59,6 +59,7 @@
         <h1 class="pd-mark" aria-label="${esc(cfg.name)}"><span class="puma">PDF</span><span class="svc">Pumasis</span></h1>
         <p class="pd-sub"><span>Pumacity Defense Force ·</span> <span>a hydrofoil missile boat ·</span> <span>eight missions</span></p>
         <nav class="pd-menu" aria-label="Main menu">${main.map(it => btn(it, true)).join("")}<div class="util">${util.map(it => btn(it, false)).join("")}</div></nav>
+        <p class="pd-touch">She is sailed with a keyboard or a gamepad: touch alone will not steer her.</p>
       </main>
       <footer class="pd-foot"><span class="gk-credit">${UI.CREDIT}</span></footer>
     </div>`;
@@ -148,6 +149,7 @@
     game.acc = 0;
     if (fresh) { toast(`Mission ${S.mission}: ${S.name}`, "", 3000, "Command"); toast(M.get(S.mission).goal, "", 4200, "Command"); }
     else toast("Back on station", "", 2000, "Command");
+    game.coach = fresh && S.mission === 1;
     hints();
   }
   function resume() { const g = PD.loadGame(); if (!g) return; startPlay(g.S, false); game.pause(); }
@@ -179,7 +181,7 @@
     gunMisfire: ["The gun misfired: it's damaged", "amber", "Weapons"], mslMisfire: ["A damaged missile misfired", "amber", "Weapons"], chaffMisfire: ["A chaff round misfired", "amber", "Weapons"],
     gunGone: ["The gun is destroyed", "red", "Weapons"], mslGone: ["The missiles are out of action", "red", "Weapons"], chaffGone: ["The chaff launcher is out of action", "red", "Weapons"], noChaff: ["No chaff left", "amber", "Weapons"],
     theyMissed: ["Their missile missed us", "green", "Radar"], weMissed: ["Our missile missed", "amber", "Weapons"], collided: ["We've collided with another vessel!", "red", "Helm"],
-    engines: ["The engines won't give more than 3", "amber", "Engines"], noContacts: ["Nothing on the radar to target", "amber", "Radar"], noCraft: ["Nothing answers to that key in this mission", "amber", "Command"],
+    engines: ["The engines won't give more than 3", "amber", "Engines"], noContacts: ["Nothing on the radar yet: get under way and watch the scope", "amber", "Radar"], noCraft: ["Nothing answers to that key in this mission", "amber", "Command"],
     notYet: ["She sails once we reach her", "amber", "Command"], already: ["We already have her on film", "", "Camera"],
   };
   const clsName = id => { const u = W.unit(game.S, id); return u ? (game.ui.aids.labels || u.side === "ours" ? C.SHIPS[u.cls].name : "contact") : "contact"; };
@@ -264,11 +266,37 @@
     const pad = I.device === "pad";
     const k = (keys, w) => keys.map(x => `<kbd>${x}</kbd>`).join("") + " " + w;
     let lead = "", tone = "", list;
-    if (inc && game.ui.aids.hints) { lead = "Missile coming"; tone = "danger"; list = pad ? [k(["pad:L-stick"], "turn across it"), k(["pad:Back+A"], "chaff")] : [k([",", "."], "turn across it"), k(["7"], "chaff"), k(["Enter"], "fire it")]; }
+    const drill = !inc && game.ui.aids.hints && coaching(S);
+    if (drill && game.ui.view !== "map") [lead, list] = drill(k, pad);
+    else if (inc && game.ui.aids.hints) { lead = "Missile coming"; tone = "danger"; list = pad ? [k(["pad:L-stick"], "turn across it"), k(["pad:Back+A"], "chaff")] : [k([",", "."], "turn across it"), k(["7"], "chaff"), k(["Enter"], "fire it")]; }
     else if (game.ui.view === "map") list = pad ? [k(["pad:L-stick"], "cursor"), k(["pad:A"], "set course"), k(["pad:LB", "pad:RB"], "craft"), k(["pad:Y"], "bridge")] : [k(["←", "→", "↑", "↓"], "cursor"), k(["Enter"], "set course"), k(["6", "7", "8", "9"], "craft"), k(["1"], "to <kbd>5</kbd> speed"), k(["V"], "bridge")];
     else if (m.mode === "aim") list = pad ? [k(["pad:L-stick"], "lay the gun"), k(["pad:A"], "fire"), k(["pad:X"], "next target"), k(["pad:B"], "maneuver")] : [k(["←", "→", "↑", "↓"], "lay the gun"), k(["Enter"], "fire"), k(["T"], "next target"), k(["6", "7", "8"], "weapon"), k(["Space"], "maneuver")];
     else list = pad ? [k(["pad:L-stick"], "steer"), k(["pad:dU", "pad:dD"], "speed"), k(["pad:X"], "target"), k(["pad:A"], "fire"), k(["pad:B"], "aim"), k(["pad:Y"], "map")] : [k(["←", "→"], "steer"), k(["↑", "↓"], "speed"), k(["T"], "target"), k(["Enter"], "fire"), k(["Space"], "aim"), k(["G"], "glasses"), k(["V"], "map")];
     HUD.hint((lead ? `<b class="hl">${lead}</b>${SEP}` : "") + list.join(SEP) + `${SEP}<span class="more"><kbd>?</kbd> all keys</span>`, tone);
+  }
+
+  /* Battle Training's first target, walked through on the key strip: find her, the glasses, aim, fire.
+   * It stands down at the first hit, or the first time she is sunk some other way */
+  function coaching(S) {
+    if (S.mission !== 1 || !game.coach) return null;
+    const m = S.me, st = S.stats;
+    if (st.shellHits || st.mslHits || st.sunk.length) {
+      game.coach = false;
+      toast("That's the drill: find her, the glasses, aim, fire. The other nine are yours", "green", 4800, "Command");
+      return null;
+    }
+    const t = W.tgt(S);
+    return (k, pad) => {
+      if (!t) {
+        if (!E.contacts(S).length) return ["Training", m.thr < 3 ? [k([pad ? "pad:dU" : "3"], "up onto the foils"), "then watch the radar for a contact"] : ["Watch the radar: the target will show as a blip"]];
+        return ["Training · 1 of 3", [k([pad ? "pad:X" : "T"], "put the contact in the glasses")]];
+      }
+      const d = PD.dist(m.x, m.y, t.x, t.y);
+      if (m.weapon !== "gun") return ["Training · 2 of 3", [k(pad ? ["pad:LB", "pad:RB"] : ["6"], "the 76mm gun")]];
+      if (m.mode !== "aim") return ["Training · 2 of 3", [k([pad ? "pad:B" : "Space"], "aim the gun")]];
+      if (d > C.GUN.range) return ["Training · 3 of 3", [k(pad ? ["pad:L-stick"] : [",", "."], "steer for her"), "the gun reaches ten miles: IN RANGE lights"]];
+      return ["Training · 3 of 3", [k(pad ? ["pad:L-stick"] : ["←", "→", "↑", "↓"], "lay the cross a little ahead of her"), k([pad ? "pad:A" : "Enter"], "fire")]];
+    };
   }
 
   /* ---- the loop ---- */
@@ -440,6 +468,7 @@
   $("title").addEventListener("click", ev => { const b = ev.target.closest("[data-act]"); if (b) titleAct(b.dataset.act); });
   $("snd").addEventListener("click", () => game.toggleMute());
   $("pausebtn").addEventListener("click", () => game.pause());
+  $("helpbtn").addEventListener("click", () => { if (game.mode === "play" && !UI.sheet) { I.clear(); UI.help(3, () => game.unpause()); } });
   $("screen").addEventListener("contextmenu", ev => ev.preventDefault());
   /* the mouse, with Keys and mouse: a ship clicked goes in the glasses; the glasses clicked lay the gun; the map clicked sets a course */
   const toCanvas = ev => { const cv = $("screen"), r = cv.getBoundingClientRect(); return [(ev.clientX - r.left) / r.width * cv.width, (ev.clientY - r.top) / r.height * cv.height]; };
@@ -472,8 +501,15 @@
     u.mapAt = u.mapZoom ? p : null;
   }, { passive: false });
 
-  /* ---- the stage: the whole window, about 360 pixels high, square pixels ---- */
-  const scaleK = () => { const kk = innerHeight / 360; return kk >= 1.5 ? Math.round(kk) : Math.max(1, kk); };
+  /* ---- the stage: the whole window, about 360 pixels high, square pixels; and never narrower than the
+   * console needs (480), whole pixels if a smaller whole number allows, a fraction only if none does ---- */
+  const MIN_W = 480;
+  const scaleK = () => {
+    const kk = innerHeight / 360, k = kk >= 1.5 ? Math.round(kk) : Math.max(1, kk);
+    if (innerWidth / k >= MIN_W) return k;
+    const f = Math.floor(kk);
+    return f >= 1.5 && innerWidth / f >= MIN_W ? f : Math.max(1, innerWidth / MIN_W);
+  };
   function fit() {
     const k = scaleK();
     K.VW = Math.ceil(innerWidth / k); K.VH = Math.ceil(innerHeight / k);

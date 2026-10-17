@@ -6,7 +6,9 @@
  * brass for what is ready and chosen, sonar green for good news, amber for
  * a warning, red-orange for danger. Where a control can be chosen as well as
  * focused, the focus is an off-white ring and only "chosen" is brass. The
- * stations themselves are pixel art (js/art/). The canon palette
+ * stations themselves are pixel art (js/art/), and the port's papers are cut
+ * from the same steel as the console: painted plate, a lip along the top,
+ * rivets at the corners, lamps for what is on. The canon palette
  * (css/gk-tokens.css) still comes first, for the greykit.games boot; nothing
  * here gives a canon name another value (games-meta STANDARD.md §4). A
  * desktop game: small screens get a note. */
@@ -35,6 +37,18 @@
   --pd-red-text: #ff9a80;                 /* danger as words, 7.4:1 */
   --pd-tawny: #e2ad6a;                    /* the puma */
   --pd-ink: #121821;
+  /* the console's steel (js/art/panel.js), for the papers */
+  --pd-steel: linear-gradient(180deg, rgba(28,36,48,.97) 0%, rgba(22,29,39,.97) 46%, rgba(16,22,30,.97) 100%);
+  --pd-lip: #3a4656;
+  --pd-edge: #2a3442;
+  --pd-plate: #0d1219;
+  --pd-plate-top: #2e3846;
+  --pd-lamp-off: #232a33;
+  --pd-rivets:
+    radial-gradient(circle, #4a5668 0 1.2px, #05070a 1.6px 2.3px, transparent 2.6px) left 6px top 7px / 6px 6px no-repeat,
+    radial-gradient(circle, #4a5668 0 1.2px, #05070a 1.6px 2.3px, transparent 2.6px) right 6px top 7px / 6px 6px no-repeat,
+    radial-gradient(circle, #4a5668 0 1.2px, #05070a 1.6px 2.3px, transparent 2.6px) left 6px bottom 6px / 6px 6px no-repeat,
+    radial-gradient(circle, #4a5668 0 1.2px, #05070a 1.6px 2.3px, transparent 2.6px) right 6px bottom 6px / 6px 6px no-repeat;
 }
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: var(--pd-bg); color: var(--pd-text); font: 500 16px/1.45 var(--ui); }
@@ -55,11 +69,13 @@ button.primary:focus { background: var(--pd-yellow-hi); border-color: var(--pd-y
 button.danger { background: transparent; border-color: rgba(232,87,58,.7); color: var(--pd-red-text); }
 button.danger:focus { background: var(--pd-red); border-color: var(--pd-red); color: var(--pd-ink); box-shadow: none; }
 button.pill { display: inline-flex; align-items: center; gap: 10px; background: transparent; color: var(--pd-muted); font-weight: 500; }
-button.pill::before { content: ""; width: 10px; height: 10px; border: 1.5px solid currentColor; border-radius: 2px; }
-button.pill.on { color: var(--pd-text); border-color: rgba(242,193,78,.6); background: rgba(242,193,78,.1); }
-button.pill.on::before { background: var(--pd-yellow); border-color: var(--pd-yellow); }
-button.pill:focus { color: var(--pd-text); background: var(--pd-raise2); border-color: var(--pd-text); box-shadow: 0 0 0 1px var(--pd-text); }
-button.pill.on:focus { background: rgba(242,193,78,.16); }
+/* a lamp, as on the console: dark when off; lit brass, with its glint, when on */
+button.pill::before, .diffs button[aria-pressed] b::before { content: ""; flex: none; width: 11px; height: 11px; border-radius: 50%; background: var(--pd-lamp-off); box-shadow: 0 0 0 1.5px #05070a, inset 0 1px 0 rgba(255,255,255,.06); }
+button.pill.on::before, .diffs button.on b::before { background: radial-gradient(circle at 35% 35%, #fff 0 1px, var(--pd-yellow-hi) 1.6px, var(--pd-yellow) 4px); box-shadow: 0 0 0 1.5px #05070a; }
+button.pill.on { color: var(--pd-text); border-color: rgba(230,189,106,.6); background: rgba(230,189,106,.1); }
+/* the focus is a ring outside the control; the brass of "on" stays as it is */
+button.pill:focus { color: var(--pd-text); background: var(--pd-raise2); border-color: var(--pd-line); box-shadow: 0 0 0 2px var(--pd-bg), 0 0 0 3.5px var(--pd-text); }
+button.pill.on:focus { border-color: rgba(230,189,106,.6); background: rgba(230,189,106,.16); }
 button.switch { min-width: 84px; }
 /* a key cap: the sans, never the pixel face (which makes T an up arrow, Z a 2 and S a 5); the arrows drawn */
 kbd { display: inline-block; min-width: 1.85em; padding: 3px 5px 2px; font: 600 13px/1 var(--ui); letter-spacing: .03em; text-align: center; color: var(--pd-text); border: 1px solid rgba(233,228,216,.3); border-bottom-width: 2px; border-radius: 3px; background: rgba(233,228,216,.07); }
@@ -76,12 +92,16 @@ input::placeholder { color: var(--pd-faint); }
 
 /* ---- a sheet: a panel over the dimmed bay or title ---- */
 .pd-sheet { z-index: 50; }
-.pd-sheet.full { position: fixed; inset: 0; display: grid; place-items: center; padding: 32px; background: rgba(6,10,16,.72); backdrop-filter: blur(3px); }
-.sh-box, .pd-win { display: flex; flex-direction: column; background: var(--pd-panel); border: 1px solid var(--pd-line); border-radius: 8px; box-shadow: 0 24px 70px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.04); overflow: hidden; }
+.pd-sheet.full { position: fixed; inset: 0; display: grid; place-items: center; padding: 32px; background: rgba(6,10,16,.76); }
+/* a sheet is a plate of the console's steel: the lip along the top, a dark line under it, rivets at the corners */
+.sh-box, .pd-win { position: relative; display: flex; flex-direction: column; background: var(--pd-rivets), var(--pd-steel); border: 1px solid var(--pd-edge); border-top: 2px solid var(--pd-lip); border-radius: 3px; box-shadow: 0 24px 70px rgba(0,0,0,.55), inset 0 1px 0 #0a0e14; overflow: hidden; }
 .sh-box { width: min(820px, 100%); max-height: calc(100vh - 64px); }
+/* more below: the foot fades while the body has further to scroll */
+.sh-box::after, .pd-win::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 56px; pointer-events: none; opacity: 0; transition: opacity .2s; background: linear-gradient(rgba(16,22,30,0), rgba(16,22,30,.96) 85%); }
+.sh-box.more::after, .pd-win.more::after { opacity: 1; }
 .pd-sheet.wide .sh-box { width: min(1080px, 100%); }
 .pd-sheet.tabbed .sh-box { height: min(600px, calc(100vh - 64px)); }
-.sh-head { flex: none; display: flex; align-items: center; gap: 10px; padding: 16px 20px 14px 24px; border-bottom: 1px solid var(--pd-hair); }
+.sh-head { flex: none; display: flex; align-items: center; gap: 10px; padding: 16px 20px 14px 24px; border-bottom: 1px solid #0a0e14; box-shadow: 0 1px 0 rgba(233,228,216,.06); }
 .sh-head h2 { flex: 1; margin: 0; font-size: 26px; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sh-head button { display: inline-flex; align-items: center; gap: 7px; background: transparent; border-color: transparent; color: var(--pd-muted); font-size: 15px; padding: 6px 10px; }
 .sh-head .ic { display: block; flex: none; }
@@ -97,7 +117,7 @@ input::placeholder { color: var(--pd-faint); }
 /* the pause menu stands on the left, the target and the TDC on the right left clear to study */
 .pd-pop { justify-items: start; align-items: center; padding-left: clamp(24px, 4vw, 64px); background: linear-gradient(90deg, rgba(6,10,16,.7) 0%, rgba(6,10,16,.5) 30%, rgba(6,10,16,.1) 55%, rgba(6,10,16,0) 70%); }
 .pd-ask { z-index: 70; background: rgba(6,10,16,.6); }
-.pd-pop .pd-win { width: min(440px, 100%); }
+.pd-pop .pd-win { width: min(480px, 100%); }
 .pd-ask .pd-win { width: min(520px, 100%); }
 .pd-ask .sh-body { padding: 20px 24px 22px; }
 /* here the pointer does not take the focus (Enter stays on Cancel), so it lights what it is over */
@@ -110,6 +130,9 @@ input::placeholder { color: var(--pd-faint); }
 .sh-body p { margin: 0 0 12px; max-width: 62ch; }
 .sh-body p.lede { font-size: 18px; color: var(--pd-text); }
 .sh-body h3 { margin: 26px 0 10px; font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--pd-muted); }
+/* a label engraved on the plate: the words, then a scored line to the edge */
+.sh-body h3:not(.mname) { display: flex; align-items: center; gap: 12px; }
+.sh-body h3:not(.mname)::after { content: ""; flex: 1; height: 1px; background: #0a0e14; box-shadow: 0 1px 0 rgba(233,228,216,.07); }
 .sh-body h3:first-child { margin-top: 0; }
 .sh-body b { font-weight: 600; color: var(--pd-text); }
 .sh-body ol, .sh-body ul { margin: 0 0 12px; padding-left: 24px; }
@@ -123,8 +146,6 @@ input::placeholder { color: var(--pd-faint); }
 .sh-body h3.mname.ok { color: var(--pd-green); }
 .sh-body h3.mname.danger { color: var(--pd-red-text); }
 .sh-body h3.mname.dim { color: var(--pd-muted); }
-.rank { font-size: 20px; margin-bottom: 4px; }
-.rank b { color: var(--pd-yellow); }
 .sh-body p.nextrank { margin: 0 0 16px; font-size: 15px; }
 .sh-body p.placed { margin: 0 0 14px; font-size: 26px; font-weight: 700; line-height: 1.15; color: var(--pd-yellow); }
 .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 14px; }
@@ -150,7 +171,8 @@ img.glyph { display: block; }
 .pd-pop .col button:focus::after { content: ""; border-left: 9px solid var(--pd-yellow); border-top: 7px solid transparent; border-bottom: 7px solid transparent; margin-left: 12px; }
 .pd-pop .keys { margin: 0; padding: 12px 26px 14px; background: rgba(0,0,0,.18); border-top: 1px solid var(--pd-hair); font-size: 14px; line-height: 1.9; color: var(--pd-muted); max-width: none; }
 .pd-pop .keys.legend { display: grid; grid-template-columns: max-content 1fr max-content 1fr; gap: 7px 12px; align-items: center; line-height: 1.2; }
-.pd-pop .keys.legend .k { display: flex; gap: 4px; justify-self: end; }
+.pd-pop .keys.legend .k { display: flex; align-items: center; gap: 4px; justify-self: end; white-space: nowrap; }
+.kb-to { color: var(--pd-faint); }
 
 /* ---- the title: the bay behind, the name, the menu in a panel ---- */
 .pd-title { position: fixed; inset: 0; overflow: hidden; background: #1a2238; }
@@ -164,7 +186,7 @@ img.glyph { display: block; }
 .pd-mark .svc { letter-spacing: .06em; }
 .pd-sub > span { white-space: nowrap; }
 .pd-sub { margin: 16px 0 30px; max-width: 440px; font-size: 14px; font-weight: 600; line-height: 1.6; letter-spacing: .2em; text-transform: uppercase; text-wrap: balance; color: var(--pd-muted); text-shadow: 0 1px 10px rgba(6,10,16,.9); }
-.pd-menu { display: flex; flex-direction: column; width: min(460px, 100%); padding: 8px 0; background: var(--pd-panel); border: 1px solid var(--pd-line); border-radius: 8px; box-shadow: 0 18px 50px rgba(0,0,0,.45); }
+.pd-menu { display: flex; flex-direction: column; width: min(460px, 100%); padding: 10px 0 8px; background: var(--pd-rivets), var(--pd-steel); border: 1px solid var(--pd-edge); border-top: 2px solid var(--pd-lip); border-radius: 3px; box-shadow: 0 18px 50px rgba(0,0,0,.45), inset 0 1px 0 #0a0e14; }
 .pd-menu button { position: relative; display: flex; align-items: center; gap: 14px; width: 100%; height: 50px; padding: 0 22px; border: 0; border-radius: 0; background: transparent; font-size: 20px; font-weight: 500; color: rgba(236,231,220,.86); }
 .pd-menu kbd { min-width: 26px; text-align: center; color: var(--pd-muted); }
 .pd-menu .lbl { white-space: nowrap; }
@@ -177,20 +199,23 @@ img.glyph { display: block; }
 .pd-menu .util { display: flex; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--pd-hair); }
 .pd-menu .util button { flex: 1; height: 44px; font-size: 16px; gap: 10px; padding: 0 18px; }
 .pd-foot { position: absolute; left: clamp(32px, 7vw, 120px); bottom: 24px; font-size: 14px; }
+/* a touch screen alone cannot sail her: said once, under the menu */
+.pd-touch { display: none; margin: 14px 0 0; max-width: 460px; font-size: 15px; color: var(--pd-muted); text-shadow: 0 1px 10px rgba(6,10,16,.9); }
+@media (hover: none) and (pointer: coarse) { .pd-touch { display: block; } }
 .pd-print .pr { animation: pd-pr .32s cubic-bezier(.2,.8,.2,1) calc(var(--i) * 45ms) both; }
 @keyframes pd-pr { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .pd-print .pr { animation: none; } }
 
 /* ---- new game, the round's report, the end ---- */
 .diffs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
-.diffs button { text-align: left; display: flex; flex-direction: column; gap: 6px; padding: 14px 16px 16px; border-radius: 6px; }
+.diffs.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* each card a small plate, as the console's: dark, lit along its top edge */
+.diffs button { text-align: left; display: flex; flex-direction: column; gap: 6px; padding: 14px 16px 16px; border-radius: 2px; background: var(--pd-plate); border-color: #202834; border-top-color: var(--pd-plate-top); }
 .diffs button b { font-size: 20px; display: flex; align-items: center; gap: 10px; }
 .diffs button span { font-size: 15px; font-weight: 500; line-height: 1.38; color: var(--pd-muted); }
-/* a card that is a choice: ticked like a pill, and it stays ticked when the focus moves on */
-.diffs button[aria-pressed] b::before { content: ""; flex: none; width: 12px; height: 12px; border: 1.5px solid currentColor; border-radius: 2px; }
-.diffs button.on { border-color: var(--pd-yellow); background: rgba(242,193,78,.1); box-shadow: inset 0 0 0 1px var(--pd-yellow); }
-.diffs button.on b::before { background: var(--pd-yellow); border-color: var(--pd-yellow); }
-.diffs button.on:focus b::before { background: var(--pd-ink); border-color: var(--pd-ink); }
+/* a card that is a choice: its lamp lit, and it stays lit when the focus moves on */
+.diffs button.on { border-color: var(--pd-yellow); background: rgba(230,189,106,.1); box-shadow: inset 0 0 0 1px var(--pd-yellow); }
+.diffs button.on:focus b::before { background: var(--pd-ink); box-shadow: 0 0 0 1.5px var(--pd-ink); }
 /* one card lit, the one Enter takes: the yellow follows the focus; the last one flown is only tagged */
 .diffs button:focus { background: var(--pd-yellow); border-color: var(--pd-yellow); box-shadow: 0 0 0 2px var(--pd-bg), 0 0 0 4px var(--pd-text); }
 .diffs button:focus b, .diffs button:focus span { color: var(--pd-ink); }
@@ -245,7 +270,9 @@ img.fig { display: inline-block; vertical-align: middle; }
 #h-tabs .hm span { color: var(--pd-muted); font-weight: 500; }
 #h-tabs .flag { margin-left: 8px; font: 600 11px/1 var(--ui); letter-spacing: .12em; text-transform: uppercase; padding: 3px 6px; border-radius: 3px; border: 1px solid var(--pd-yellow); color: var(--pd-text); }
 /* the clock: now, when it ends, how long is left, and the time compression */
-#h-clock { right: 12px; top: 8px; display: flex; align-items: center; gap: 14px; padding: 5px 12px; white-space: nowrap; }
+/* top right: pause, help and sound, then the clock */
+#hud .h-right { position: absolute; right: 12px; top: 8px; display: flex; align-items: center; gap: 10px; }
+#hud #h-clock { position: static; display: flex; align-items: center; gap: 14px; padding: 5px 12px; white-space: nowrap; }
 .hc-time { font: 400 20px/1 var(--px); }
 .hc-ends { font-size: 14px; color: var(--pd-muted); }
 .hc-ends b { color: var(--pd-text); font-variant-numeric: tabular-nums; }
@@ -285,8 +312,8 @@ img.fig { display: inline-block; vertical-align: middle; }
 @keyframes pd-flash { from { opacity: 1; } to { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .h-flash.on { animation: none; } }
 
-/* the pause and sound buttons, left of the clock */
-#corner { position: fixed; right: 360px; top: 8px; display: flex; gap: 6px; z-index: 5; }
+/* the pause, help and sound buttons, left of the clock (js/hud.js puts them there) */
+#corner { display: flex; gap: 6px; pointer-events: auto; }
 #corner button { width: 32px; height: 32px; padding: 0; display: grid; place-items: center; background: rgba(16,22,32,.86); color: #e9e4d8; border: 1px solid rgba(233,228,216,.12); border-radius: 6px; }
 @media (hover: hover) { #corner button:hover { background: rgba(38,49,66,.92); color: #fff; } }
 #corner button:focus { background: rgba(16,22,32,.86); color: #e9e4d8; box-shadow: none; border-color: rgba(233,228,216,.12); }
@@ -305,12 +332,21 @@ img.fig { display: inline-block; vertical-align: middle; }
   #small { display: flex; }
   #game, #title, #corner, .gk-boot, .pd-sheet, .pd-ask { display: none !important; }
 }
-@media (max-width: 1100px) { .diffs { grid-template-columns: 1fr; } .report { grid-template-columns: 1fr; } }
+@media (max-width: 1100px) { .diffs { grid-template-columns: repeat(2, minmax(0, 1fr)); } .report { grid-template-columns: 1fr; } }
 
 /* ---- the puma's crest, on the port's papers ---- */
 img.crest { display: block; width: 48px; height: 48px; image-rendering: pixelated; flex: none; }
 .cap { display: flex; align-items: center; gap: 14px; margin-bottom: 4px; }
 .cap h3.mname { margin: 0; }
+/* a win: the crest stamped on the signal */
+.cap.stamp img.crest { animation: pd-stamp .55s cubic-bezier(.2,.9,.25,1.25) .2s both; }
+@keyframes pd-stamp { from { opacity: 0; transform: scale(1.9) rotate(-16deg); filter: blur(2px); } 60% { opacity: 1; filter: none; } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .cap.stamp img.crest { animation: none; } }
+.sh-body p.tip { margin: 0 0 14px; padding: 10px 14px; font-size: 16px; background: var(--pd-plate); border: 1px solid #202834; border-top-color: var(--pd-plate-top); border-radius: 2px; }
+.sh-body p.tip b { color: var(--pd-yellow-hi); }
+/* the papers' chart of the waters */
+figure.chart { margin: 18px 0 0; }
+figure.chart img { display: block; max-width: 100%; height: auto; border: 1px solid var(--pd-edge); border-top-color: var(--pd-lip); }
 .sh-body p.honour { margin: 0 0 12px; font-size: 18px; font-weight: 600; color: var(--pd-green); }
 /* the reality, folded to one line until it is wanted */
 .real summary b { color: var(--pd-text); }

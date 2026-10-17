@@ -1,6 +1,7 @@
 /* PDF Pumasis -- the HUD: the little that is not on the console.
  *
- * Top left, the two views (V) and the mission; top right, the clock (now,
+ * Top left, the two views (V) and the mission; top right, pause, help and
+ * sound, then the clock (now,
  * when the mission ends, how long is left) and the time compression, amber
  * with the reason when something in the air is holding it at 8x. Over the
  * console, the crew's reports, each with the PDF crest; along the foot, the
@@ -16,11 +17,13 @@
     const el = HUD.el = $("hud");
     el.innerHTML = `
       <nav class="hp" id="h-tabs" aria-label="Views"><button data-v="bridge"><kbd>V</kbd>Bridge</button><button data-v="map"><kbd>V</kbd>Map</button><div class="hm"></div></nav>
-      <div class="hp" id="h-clock"><div class="hc-time">0000</div><div class="hc-ends">Ends <b>0000</b>, <b class="left">0:00</b> left</div><div class="hc-tc"><span class="lbl">Time</span><b>1x</b><span class="why"></span></div></div>
+      <div class="h-right"><div class="hp" id="h-clock"><div class="hc-time">0000</div><div class="hc-ends">Ends <b>0000</b>, <b class="left">0:00</b> left</div><div class="hc-tc"><span class="lbl">Time</span><b>1x</b><span class="why"></span></div></div></div>
       <div class="h-low"><div class="h-toasts"></div></div>
       <div class="hp h-hint" hidden></div>
       <div class="hp h-end" hidden></div>
       <div class="h-flash"></div>`;
+    /* the pause, help and sound buttons stand just left of the clock, however wide it grows */
+    const corner = $("corner"); if (corner) el.querySelector(".h-right").prepend(corner);
     el.querySelector("#h-tabs").addEventListener("click", ev => { const b = ev.target.closest("[data-v]"); if (b && PD.game.setView) PD.game.setView(b.dataset.v); });
     HUD.last = {};
     HUD.built = true;

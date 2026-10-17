@@ -7,7 +7,8 @@
   const KEY_PREFS = "pdfpumasis_prefs_v1", KEY_GAME = "pdfpumasis_game_v1", KEY_RECORD = "pdfpumasis_record_v1";
   PD.KEY_MUTED = "pdfpumasis_muted_v1";
 
-  /* ---- the aids: Classic is 1987, Field is a modern helping hand. None of them changes the fight ---- */
+  /* ---- the aids: Classic is 1987, Field is a modern helping hand. None of them changes the fight.
+   A first sailing starts in Field, so the keys are on screen; Classic is one press of L away ---- */
   PD.AID_LIST = [
     ["labels", "Contact labels", "What each contact is, and whose: in the glasses, over the bow, on the radar and the map. Classic: tell them by their shapes."],
     ["lead", "Gun lead mark", "A green mark in the glasses where the shells must go to meet a moving target."],
@@ -27,8 +28,8 @@
   PD.calm = () => CALM.matches;
   PD.STEER = { classic: "Keys", modern: "Keys and mouse" };
   PD.SPEEDS = { classic: ["Normal", 50], relaxed: ["Relaxed", 40], brisk: ["Brisk", 60] };
-  PD.prefs = Object.assign({ aids: "classic", over: {}, steer: "classic", speed: "classic", scanlines: false, shake: !CALM.matches, asked: false, resume: true }, PD.store.get(KEY_PREFS, {}));
-  if (!PD.AIDS[PD.prefs.aids]) PD.prefs.aids = "classic";
+  PD.prefs = Object.assign({ aids: "field", over: {}, steer: "classic", speed: "classic", scanlines: false, shake: !CALM.matches, asked: false, resume: true }, PD.store.get(KEY_PREFS, {}));
+  if (!PD.AIDS[PD.prefs.aids]) PD.prefs.aids = "field";
   if (!PD.STEER[PD.prefs.steer]) PD.prefs.steer = "classic";
   PD.modern = () => PD.prefs.steer === "modern";
   PD.savePrefs = () => PD.store.set(KEY_PREFS, PD.prefs);

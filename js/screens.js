@@ -17,13 +17,18 @@
     const el = document.createElement("div");
     el.className = "pd-sheet " + (popup ? "pd-pop" : "full") + (wide ? " wide" : "") + (tabs ? " tabbed" : "");
     el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-label", title);
-    const draw = () => {
+    let draw = () => {
       el.innerHTML = '<div class="' + (popup ? "pd-win" : "sh-box") + '"><header class="sh-head">' + (back ? '<button data-back title="Back (Esc)">' + ICON_BACK + "Back</button>" : "") + "<h2>" + esc(title) + "</h2>" +
         (closable && !back && !popup ? '<button data-x title="Close (Esc)">' + ICON_X + "Close</button>" : "") + "</header>" +
         (tabs ? '<div class="sh-tabs" role="tablist" aria-label="' + esc(title) + '">' + tabs.map(([t], i) => '<button role="tab" id="tab-' + i + '" data-tab="' + i + '" aria-selected="' + (i === tab) + '" aria-controls="tabpanel" tabindex="' + (i === tab ? 0 : -1) + '">' + esc(t) + "</button>").join("") + "</div>" : "") +
         '<div class="sh-body"' + (tabs ? ' id="tabpanel" role="tabpanel" aria-labelledby="tab-' + tab + '" tabindex="0"' : "") + '><div class="sh-in">' + PD.Input.caps(tabs ? tabs[tab][1] : html()) + "</div></div></div>";
     };
+    /* more below: a fade along the foot while the body has more to scroll to */
+    const cue = () => { const b = el.querySelector(".sh-body"), box = b && b.parentNode; if (box) box.classList.toggle("more", b.scrollHeight - b.scrollTop - b.clientHeight > 4); };
+    const draw0 = draw;
+    draw = () => { draw0(); requestAnimationFrame(cue); };
     draw();
+    el.addEventListener("scroll", cue, true);
     const api = { refresh: () => { const b = el.querySelector(".sh-body"), y = b.scrollTop, f = document.activeElement && document.activeElement.dataset; draw(); el.querySelector(".sh-body").scrollTop = y; if (f) for (const k of ["set", "act", "d", "start"]) if (f[k]) { const n = el.querySelector(`[data-${k}="${f[k]}"]`); if (n) n.focus({ preventScroll: true }); } }, close: () => UI.close(), el };
     const setTab = i => { tab = (i + tabs.length) % tabs.length; draw(); el.querySelector('[data-tab="' + tab + '"]').focus(); };
     el.addEventListener("click", ev => {
@@ -117,21 +122,33 @@
       onClick: b => { if (b.dataset.m) { UI.close(true); UI.brief(+b.dataset.m); } },
     });
   };
+  /* the mission's waters as the map shows them before anything is sighted: the coast, the boat, the objective */
+  const chart = id => {
+    const S = E.newMission(id, { seed: 1 }), w = S.win, ww = w[2] - w[0], wh = w[3] - w[1], z = Math.min(240 / ww, 150 / wh);
+    const cw = Math.round(ww * z), ch = Math.round(wh * z), c = PD.K.mk(cw, ch), g = c.getContext("2d");
+    g.imageSmoothingEnabled = false;
+    PD.OpsMap.draw(g, S, { aids: { goal: true }, circles: false, mapZoom: 0 }, { x: 0, y: 0, w: cw, h: ch }, 500);
+    return `<img class="chart px" src="${c.toDataURL()}" width="${cw * 2}" height="${ch * 2}" alt="Chart of the operating area: our boat is the white arrow${M.get(id).exit || M.get(id).dest || M.get(id).supply || id === 3 || id === 5 ? ", the objective dotted in green" : ""}.">`;
+  };
   /* ---- a mission's papers, before you sail ---- */
   UI.brief = (id, custom) => {
     const mi = M.get(id), k = C.BOATS[mi.boat], hs = mi.helos.length, hour = custom && custom.hour !== undefined ? custom.hour : mi.hour;
     let aids = PD.prefs.aids;
-    const ask = !PD.prefs.asked;
+    const ask = !PD.prefs.asked, pic = chart(id);
+    /* the first time, the choice of aids: Field first, as a first sailing wants the keys on screen */
+    const set = (v, n, d) => `<button data-set="aids:${v}" aria-pressed="${aids === v}" class="${aids === v ? "on" : ""}"><b>${n}</b><span>${d}</span></button>`;
     UI.open(`Mission ${mi.id}: ${mi.name}`, { wide: true, back: () => custom ? UI.custom() : UI.missions(),
       html: () => `<div class="report"><div>
         <div class="cap">${crest()}<h3 class="mname">${esc(mi.where)}</h3></div>
         <p class="lede">${esc(mi.brief)}</p>
-        <p><b>Objective:</b> ${esc(mi.goal)}.</p></div><div>
+        <p><b>Objective:</b> ${esc(mi.goal)}.</p>
+        ${mi.id === 1 && (ask ? aids === "field" : PD.aid("hints")) ? `<p class="note">New to the bridge? The key strip along the foot walks you through the first target.</p>` : ""}
+        <figure class="chart">${pic}</figure></div><div>
         <table class="tally"><tr><td>Your boat</td><td>${esc(k.name)}: 76mm, ${esc(C.MSL[k.msl].name)} ×${k.mslN}, chaff ×${k.chaff}</td></tr>
         <tr><td>Kestrels</td><td>${hs ? hs + " helicopter" + (hs > 1 ? "s" : "") + ", steered from the map" : "none"}</td></tr>
-        <tr><td>Sails</td><td class="num">${hours(hour)}</td></tr><tr><td>Time allowed</td><td class="num">${C.hm(mi.limit)}</td></tr>
+        <tr><td>Sails at</td><td class="num">${hours(hour)}</td></tr><tr><td>Time allowed</td><td class="num">${C.hm(mi.limit)}</td></tr>
         <tr><td>Highest rank</td><td>${esc(C.RANKS[mi.max])}</td></tr></table>
-        ${ask ? `<h3>How to play it</h3><div class="row">${pill(aids === "classic", "Classic", "aids:classic")}${pill(aids === "field", "Field", "aids:field")}</div><p class="note">${aids === "classic" ? "As 1987 played: tell ships by their shapes, lead the gun by the corrector bars." : "With modern aids: labels, a lead mark, missile warnings, rings and marks on the map."} <kbd>L</kbd> switches at sea.</p>` : `<p class="note">${esc(PD.aidsLabel())} aids. <kbd>L</kbd> switches at sea.</p>`}
+        ${ask ? `<h3>How to play it</h3><div class="diffs two">${set("field", "Field", "Modern aids: contact labels, a gun-lead mark, missile warnings, the keys along the foot.")}${set("classic", "Classic", "As 1987 played: tell ships by their shapes, lead the gun by the corrector bars.")}</div><p class="note"><kbd>L</kbd> switches at sea; Settings sets each aid on its own.</p>` : `<p class="note">${esc(PD.aidsLabel())} aids. <kbd>L</kbd> switches at sea.</p>`}
         </div></div>
         <div class="row end"><button data-act="go" class="primary">Sail</button></div>`,
       onKey: ev => { if (ev.key === "Enter" && !(ev.target.closest && ev.target.closest("button"))) { ev.preventDefault(); go(); return true; } return false; },
@@ -168,7 +185,7 @@
   const WHY_SHORT = { goal: "objective done", time: "time ran out", sunk: "sunk", fuel: "out of fuel", quit: "quit", escaped: "some escaped", convoyLost: "the ship was lost", cargoSunk: "a merchant sunk" };
 
   /* ---- pause ---- */
-  const KEY_LEGEND = [["V", "bridge or map"], [", .", "steer"], ["0 1 2 3 4 5", "speed"], ["Space", "maneuver or aim"], ["6 7 8", "gun, chaff, missile"], ["T", "next target"], ["Enter", "fire"], ["+ −", "time"]];
+  const KEY_LEGEND = [["V", "bridge or map"], [", .", "steer"], ["0 – 5", "speed"], ["Space", "maneuver or aim"], ["6 7 8", "gun, chaff, missile"], ["T", "next target"], ["Enter", "fire"], ["+ −", "time"]];
   const PAD_LEGEND = [["pad:L-stick", "steer, or aim"], ["pad:dU pad:dD", "speed"], ["pad:B", "maneuver or aim"], ["pad:LB pad:RB", "weapon"], ["pad:X", "next target"], ["pad:A", "fire"], ["pad:Y", "bridge or map"], ["pad:LT pad:RT", "time"]];
   UI.pause = () => {
     const S = PD.game.S;
@@ -179,7 +196,7 @@
         <button data-act="settings">Settings</button><button data-act="help">Help</button>
         <button data-act="leave">${PD.prefs.resume ? "Main menu: resume it later" : "Main menu"}</button>
         <button data-act="quit">End the mission</button></div>
-        <div class="note keys legend">${(PD.Input.device === "pad" ? PAD_LEGEND : KEY_LEGEND).map(([k2, w]) => `<span class="k">${k2.split(" ").map(x => `<kbd>${x}</kbd>`).join(" ")}</span><span>${w}</span>`).join("")}</div>`,
+        <div class="note keys legend">${(PD.Input.device === "pad" ? PAD_LEGEND : KEY_LEGEND).map(([k2, w]) => `<span class="k">${k2.split(" ").map(x => x === "–" ? '<span class="kb-to">–</span>' : `<kbd>${x}</kbd>`).join(" ")}</span><span>${w}</span>`).join("")}</div>`,
       onClick: async b => {
         const a = b.dataset.act;
         if (a === "resume") UI.close();
@@ -194,14 +211,29 @@
 
   /* ---- the debrief (1987: objective, sunk, damaged, time, survival; the total; the rank) ---- */
   const WHY = { goal: "Objective complete.", time: "Time is up.", sunk: "We have been sunk.", fuel: "Out of fuel: she lies dead in the water.", quit: "You ended the mission.", escaped: "Some of them got away.", convoyLost: "The ship we were escorting is lost.", cargoSunk: "An unarmed merchant was sunk: the mission is over." };
+  /* the one thing most worth doing differently, from what happened */
+  const tip = S => {
+    const st = S.stats, why = S.end.why;
+    if (why === "goal") return "";
+    if (!st.fired && !st.shells) return "No shots fired. <kbd>T</kbd> puts a contact in the glasses, <kbd>Space</kbd> aims the gun, <kbd>Enter</kbd> fires.";
+    if (why === "sunk" && st.hitsUs) return "Their missiles found us. Fire chaff (<kbd>7</kbd>) when one is about a mile out, running across its path.";
+    if (why === "fuel") return "The foils drink fuel. Come down off them (<kbd>2</kbd> or less) for the long runs, and watch the FUEL bar.";
+    if (st.shells && !st.shellHits) return "The shells fell wide. In Aiming, lay the cross ahead of a moving ship: the corrector bars show which way. Up is over, down is short.";
+    if (st.fired && !st.mslHits) return "The missiles missed. Fire inside their reach, not too close, at whatever is in the glasses.";
+    if (why === "time") return "Time ran out. <kbd>+</kbd> compresses time on the long runs; set the autopilot from the map (<kbd>V</kbd>) and let her steer.";
+    if (why === "escaped") return "Some got away. Cut them off: on the map (<kbd>V</kbd>), the cursor and <kbd>Enter</kbd> set a course across their path.";
+    return "";
+  };
   UI.debrief = S => {
-    const sc = S.score || E.score(S), mi = M.get(S.mission), best = PD.addRecord(S, sc), ok = S.end && S.end.ok;
-    UI.open("Mission over", { wide: true, closable: false,
+    const sc = S.score || E.score(S), mi = M.get(S.mission), best = PD.addRecord(S, sc), ok = S.end && S.end.ok, t = tip(S);
+    const further = sc.next != null ? `${num(sc.next - sc.total)} more points for ${esc(C.RANKS[sc.rankI + 1])}.` : sc.rankI >= mi.max ? "The highest rank this mission gives." : `${esc(sc.max)} needs the objective done.`;
+    UI.open("Signal from Command", { wide: true, closable: false,
       html: () => `<div class="report"><div>
-        <div class="cap">${crest()}<h3 class="mname big${ok ? " ok" : S.end.why === "sunk" ? " danger" : ""}">${esc(sc.rank)}</h3></div>
-        <p class="meta">Mission ${mi.id}, ${esc(mi.name)}. ${esc(WHY[S.end.why] || "")}</p>
-        <p class="rank">Rank <b>${esc(sc.rank)}</b> of a possible ${esc(sc.max)}${best ? ": your best here" : ""}.</p>
-        ${!ok && sc.rankI >= mi.max - 1 ? `<p class="note">${esc(sc.max)} needs the objective done.</p>` : ""}
+        <div class="cap${ok ? " stamp" : ""}">${crest()}<h3 class="mname big${ok ? " ok" : S.end.why === "sunk" ? " danger" : ""}">${esc(sc.rank)}</h3></div>
+        <p class="meta">Mission ${mi.id}, ${esc(mi.name)}: of a possible ${esc(sc.max)}.${best && sc.total > 0 ? " Your best in this mission." : ""}</p>
+        <p class="lede">${esc(WHY[S.end.why] || "")}</p>
+        <p class="nextrank">${further}</p>
+        ${t ? `<p class="tip"><b>Next time.</b> ${t}</p>` : ""}
         <p class="note">${S.stats.fired} missiles fired, ${S.stats.mslHits} hit. ${num(S.stats.shells)} shells, ${S.stats.shellHits} hits. ${S.stats.hitsUs ? `Hit by ${S.stats.hitsUs} missile${S.stats.hitsUs > 1 ? "s" : ""}.` : ""}${sc.code ? " The code was used." : ""}</p></div>
         <div><table class="tally">${sc.rows.map(([n, v]) => `<tr><td>${esc(n)}</td><td class="num">${num(v)}</td></tr>`).join("")}<tr class="sum"><td>Total</td><td class="num">${num(sc.total)}</td></tr></table></div></div>
         <div class="row end"><button data-act="again" class="primary">Play it again</button><button data-act="missions">Missions</button><button data-act="title">Main menu</button></div>`,
