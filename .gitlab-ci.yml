@@ -11,6 +11,7 @@ validate:
   image: node:20-alpine
   script:
     - node tools/check-assets.js
+    - node tools/check-ship.js
     # every script parses
     - for f in js/*.js js/engine/*.js js/art/*.js tools/*.js; do node --check "$f"; done
     # the coast sound, the gun and chaff true, every mission winnable by the bot, and a replay that matches step for step
